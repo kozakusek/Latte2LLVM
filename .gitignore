@@ -1,0 +1,9 @@
+.vscode
+*.ll
+*.bc
+*.esp
+*.desugared
+*.o
+*.hi
+latc
+latc_llvm

@@ -1,0 +1,111 @@
+-- Latte Language in LBNF
+-- Main inspiration:
+--      https://www.mimuw.edu.pl/~ben/Zajecia/Mrj2020/Latte/
+
+-- programs ------------------------------------------------
+
+entrypoints Program ;
+
+ProgramT.   Program ::= [TopDef] ;
+
+FnDef.	   TopDef  ::= Type Ident "(" [Arg] ")" Block ;
+ClDef.     TopDef  ::= "class" Ident ClBlock ;
+SubClDef.  TopDef  ::= "class" Ident "extends" Ident ClBlock ;
+
+separator nonempty TopDef "" ;
+
+ArgT. 	   Arg ::= Type Ident;
+
+separator  Arg "," ;
+
+-- classes -------------------------------------------------
+
+ClBlockT.  ClBlock ::= "{" [InClDef] "}";
+MthDef.    InClDef ::= Type Ident "(" [Arg] ")" Block ;
+FldDef.    InClDef ::= Type Ident ";" ;
+
+separator InClDef "" ;
+
+-- statements ----------------------------------------------
+
+BlockT.     Block ::= "{" [Stmt] "}" ;
+
+separator  Stmt "" ;
+
+Empty.     Stmt ::= ";" ;
+BStmt.     Stmt ::= Block ;
+Decl.      Stmt ::= Type [Item] ";" ;
+NoInit.    Item ::= Ident ; 
+Init.      Item ::= Ident "=" Expr ;
+
+separator nonempty Item "," ;
+
+Ass.       Stmt ::= Expr "=" Expr  ";" ;
+Incr.      Stmt ::= Ident "++"  ";" ;
+Decr.      Stmt ::= Ident "--"  ";" ;
+Ret.       Stmt ::= "return" Expr ";" ;
+VRet.      Stmt ::= "return" ";" ;
+Cond.      Stmt ::= "if" "(" Expr ")" Stmt ;
+CondElse.  Stmt ::= "if" "(" Expr ")" Stmt "else" Stmt ; -- s/r
+While.     Stmt ::= "while" "(" Expr ")" Stmt ;
+For.       Stmt ::= "for" "(" Type Ident ":" Expr ")" Stmt ;
+SExp.      Stmt ::= Expr  ";" ;
+
+-- Types ---------------------------------------------------
+
+Int.       Type ::= "int" ;
+Bool.      Type ::= "boolean" ;
+Void.      Type ::= "void" ;
+Str.       Type ::= "string" ;
+Arr.       Type ::= Type "[]" ;
+Cl.        Type ::= Ident ;
+
+separator  Type "," ; -- Generates unused rules.
+
+-- Expressions ---------------------------------------------
+
+EVar.      Expr7 ::= Ident ;
+ELitInt.   Expr7 ::= Integer ;
+EString.   Expr7 ::= String ;
+ELitTrue.  Expr7 ::= "true" ;
+ELitFalse. Expr7 ::= "false" ;
+ECastId.   Expr7 ::= "(" Expr ")" "null" ;
+ECastArr. Expr7 ::= "(" Type "[]" ")" "null" ;
+internal ECast. Expr7 ::= "(" Type ")" "null" ; -- Trick to avoid r/r.
+EFun.      Expr7 ::= Ident "(" [Expr] ")" ;
+EMth.      Expr7 ::= Expr7 "." Ident "(" [Expr] ")" ;
+EInd.      Expr7 ::= Expr7 "[" Expr "]" ;
+EAcc.      Expr7 ::= Expr7 "." Ident ;
+ENew.      Expr6 ::= "new" Type ;
+ENewArr.   Expr6 ::= "new" Type "[" Expr "]" ; -- Is it a good level?
+ENeg.      Expr5 ::= "-" Expr6 ;
+ENot.      Expr5 ::= "!" Expr6 ;
+EMul.      Expr4 ::= Expr4 MulOp Expr5 ;
+EAdd.      Expr3 ::= Expr3 AddOp Expr4 ;
+ERel.      Expr2 ::= Expr2 RelOp Expr3 ;
+EAnd.      Expr1 ::= Expr2 "&&" Expr1 ;
+EOr.       Expr  ::= Expr1 "||" Expr ;
+
+coercions  Expr 8 ;
+
+separator  Expr "," ;
+
+-- operators -----------------------------------------------
+
+Plus.      AddOp ::= "+" ;
+Minus.     AddOp ::= "-" ;
+Times.     MulOp ::= "*" ;
+Div.       MulOp ::= "/" ;
+Mod.       MulOp ::= "%" ;
+LTH.       RelOp ::= "<" ;
+LE.        RelOp ::= "<=" ;
+GTH.       RelOp ::= ">" ;
+GE.        RelOp ::= ">=" ;
+EQU.       RelOp ::= "==" ;
+NE.        RelOp ::= "!=" ;
+
+-- comments ------------------------------------------------
+
+comment    "#" ;
+comment    "//" ;
+comment    "/*" "*/" ;

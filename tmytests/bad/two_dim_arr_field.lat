@@ -1,0 +1,13 @@
+class Test {
+
+    string[][] x;
+
+    int[] f() {
+        return (int[]) null;
+    }
+}
+
+int main() {
+    new int[][2];
+    return 0;
+}

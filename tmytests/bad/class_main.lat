@@ -1,0 +1,5 @@
+class A {}
+
+A main() {
+    return (A) null;
+}

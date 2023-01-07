@@ -1,0 +1,4 @@
+int main () {
+  boolean b = new boolean;
+  return 0 ;
+}

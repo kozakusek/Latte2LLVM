@@ -1,0 +1,17 @@
+class Test {
+    int field1;
+    int field2;
+
+    int method1(int x) {
+        return 1;
+    }
+
+    int method2(int x, int y, string x) {
+        return 2;
+    }
+
+}
+
+int main() {
+    return 0;
+}

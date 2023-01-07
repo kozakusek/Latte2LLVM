@@ -1,0 +1,19 @@
+class A extends B{
+    int fieldA;
+
+    int method() {
+        return 1;
+    }
+}
+
+class B extends A {
+    int fieldB;
+
+    int method() {
+        return 2;
+    }
+}
+
+int main() {
+    return 0;
+}

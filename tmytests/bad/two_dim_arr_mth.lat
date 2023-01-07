@@ -1,0 +1,10 @@
+class Test {
+    int[][] f() {
+        return (int[][]) null;
+    }
+}
+
+int main() {
+    Test t;
+    return 0;
+}
