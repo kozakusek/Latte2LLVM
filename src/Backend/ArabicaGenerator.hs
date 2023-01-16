@@ -181,6 +181,9 @@ genLLVMinstr sm ts i = case i of
         cmdPrefix ++ "%" ++ t ++ " = getelementptr inbounds [" ++ show (length str + 1) ++ " x i8], ["
         ++ show (length str + 1) ++ " x i8]* " ++ sm Map.! str ++ ", i32 0, i32 0"
         ]
+  PHI s vls -> return [
+    cmdPrefix ++ "%" ++ s ++ " = phi " ++ genType (ts Map.! s) ++ " " 
+      ++ intercalate ", " (map (\(v, l) -> "[" ++ " %" ++ v ++ ", %" ++ l ++ "]") vls)]
   CALL s f ets -> do
     t <- getTemp
     (args, maybeLoads) <- mapAndUnzipM (\case

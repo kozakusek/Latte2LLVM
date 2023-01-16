@@ -98,6 +98,7 @@ executeBlock eb funs env instr = if "ret" `Map.member` env then return env else 
   CPY s lv -> do
     v <- getVal env lv
     return $ Map.insert s v env
+  PHI s ls -> undefined
   BR s -> do
     let pos = fromJust $ elemIndex (LAB s) eb
     r <- foldM (executeBlock eb funs) env (drop (pos + 1) eb)

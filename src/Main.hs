@@ -10,11 +10,13 @@ import Latte.Print (Print (prt), render)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.IO (hPutStrLn, stderr)
-import Control.Monad (when)
+import Control.Monad (when, foldM_)
 import System.FilePath (takeBaseName, replaceExtension)
 import Data.Either (fromRight)
 import Backend.ArabicaGenerator (generateLLVM)
 import System.Process (system)
+import qualified Data.Map as Map
+import Backend.SingleShotAffogato (makeCFG, computeDominators, computeImmediateDominators, computeDominanceFrontier, placePhiNodes)
 
 compileFile :: Bool -> FilePath -> IO ()
 compileFile v f = readFile f >>= compile v f
@@ -39,6 +41,23 @@ compile verbose fn code = do
   hPutStrLn stderr "OK"
 #if COMPILER
   let esp = removeMilk (fromRight undefined checked)
+  mapM_ (\(name, m) -> do
+     putStrLn name
+     let cfg = makeCFG m
+     let dom = computeDominators cfg
+     let idom = computeImmediateDominators cfg dom
+     let df = computeDominanceFrontier cfg idom
+     let phi = placePhiNodes cfg df
+     putStrLn $ show $ cfg
+     putStrLn "DOMINATORS:"
+     putStrLn $ show $ dom 
+     putStrLn "IMMEDIATE DOMINATORS:"
+     putStrLn $ show $ idom
+     putStrLn "DOMINANCE FRONTIER:"
+     putStrLn $ show $ df
+     putStrLn "PHI NODES:"
+     putStrLn $ show $ phi
+     ) $ Map.assocs $ functions esp
   when verbose $ saveFile (replaceExtension fn ".esp") (show esp)
   let code = generateLLVM esp
   saveFile (replaceExtension fn ".ll") code

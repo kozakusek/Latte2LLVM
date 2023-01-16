@@ -41,6 +41,7 @@ data Instruction
   | NEG Label ET
   | NOT Label ET
   | CPY Label ET
+  | PHI Label [(Label, Label)]
   | CALL Label Label [ET]
   | CBR ET Label Label
   | BR Label
@@ -94,6 +95,7 @@ instance Show Instruction where
   show (NEG l lv) = l ++ " = -" ++ show lv
   show (NOT l lv) = l ++ " = !" ++ show lv
   show (CPY l lv) = l ++ " = " ++ show lv
+  show (PHI l lvs) = l ++ " = phi(" ++ unwords (map (\(l1, l2) -> "[" ++ l1 ++ ", " ++ l2 ++ "]") lvs) ++ ")"
   show (CALL l1 l2 i) = l1 ++ " = call " ++ l2 ++ "(" ++ unwords (map show i) ++ ")"
   show (CBR v lv1 lv2) = "if " ++ show v ++ " goto " ++ lv1 ++ " else goto " ++ lv2
   show (BR l) = "goto " ++ l
