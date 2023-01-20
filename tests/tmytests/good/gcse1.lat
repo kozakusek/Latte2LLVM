@@ -1,0 +1,42 @@
+int main() {
+    int x = readInt();
+    int y = readInt();
+    int z = readInt();
+
+    int a = x + y;
+    printInt(a);
+    int b = x + z;
+    printInt(b);
+    int c = y + z;
+    printInt(c);
+
+    int d = x + y;
+    printInt(d);
+    int e = x + z;
+    printInt(e);
+    int f = y + z;
+    printInt(f);
+
+    if (x == y) {
+        int g = x + y;
+        printInt(g);
+    } else if (x == z){
+        int h = x + z;
+        printInt(h);
+    } else {
+        int i = y + z;
+        printInt(i);
+        if (d == e) {
+            int j = y + x;
+            printInt(j);
+        } else if (d == f){
+            int k = z + x;
+            printInt(k);
+        } else {
+            int l = z + y;
+            printInt(l);
+        }
+    }
+
+    return 0;
+}

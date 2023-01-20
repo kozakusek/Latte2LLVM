@@ -13,15 +13,19 @@ import Control.Monad (foldM_, void, mapAndUnzipM)
 import Data.Map (member)
 import Data.Maybe (fromJust, fromMaybe)
 
+lookupik m k = case Map.lookup k m of
+  Just v -> v
+  Nothing -> error $ "lookupik: " ++ show k ++ " not found in " ++ show m
+
 type Label = String
 
-data Value = VInt Integer | VBool Bool | VString String deriving (Eq)
+data Value = VInt Integer | VBool Bool | VString String deriving (Eq, Ord)
 
 espTrue, espFalse :: Value
 espTrue = VBool True
 espFalse = VBool False
 
-data ET = L Label | V Value deriving (Eq)
+data ET = L Label | V Value deriving (Eq, Ord)
 
 
 data Instruction
@@ -41,13 +45,13 @@ data Instruction
   | NEG Label ET
   | NOT Label ET
   | CPY Label ET
-  | PHI Label [(Label, Label)]
+  | PHI Label [(ET, Label)]
   | CALL Label Label [ET]
   | CBR ET Label Label
   | BR Label
   | RET ET
   | VRET
-  | LAB Label deriving (Eq)
+  | LAB Label deriving (Eq, Ord)
 -- Array Access
 -- Field Acces
 -- Memory Dereference
@@ -95,7 +99,7 @@ instance Show Instruction where
   show (NEG l lv) = l ++ " = -" ++ show lv
   show (NOT l lv) = l ++ " = !" ++ show lv
   show (CPY l lv) = l ++ " = " ++ show lv
-  show (PHI l lvs) = l ++ " = phi(" ++ unwords (map (\(l1, l2) -> "[" ++ l1 ++ ", " ++ l2 ++ "]") lvs) ++ ")"
+  show (PHI l lvs) = l ++ " = phi(" ++ unwords (map (\(l1, l2) -> "[" ++ show l1 ++ ", " ++ l2 ++ "]") lvs) ++ ")"
   show (CALL l1 l2 i) = l1 ++ " = call " ++ l2 ++ "(" ++ unwords (map show i) ++ ")"
   show (CBR v lv1 lv2) = "if " ++ show v ++ " goto " ++ lv1 ++ " else goto " ++ lv2
   show (BR l) = "goto " ++ l
@@ -146,7 +150,7 @@ getFunRetType f = do
   (m, i, fr) <- get
   case fr Map.!? f of
     Just t -> return t
-    Nothing -> return $ demilkType $ FT.methodRetType $ FT.builtinMethods Map.!   Ident f
+    Nothing -> return $ demilkType $ FT.methodRetType $ FT.builtinMethods `lookupik`   Ident f
 
 userLabel :: Label -> Ident -> Label
 userLabel id (Ident x) = "u_" ++ id ++ "_" ++ x
@@ -246,7 +250,7 @@ demilkDeclaration ty (blocks, types) (NoInit _ n) = do
 demilkExpr :: ETypeMap -> Expr -> EspM (EspressoBlock, Label, ETypeMap)
 demilkExpr types (EVar _ id) = do
   m <- getLabMap
-  return ([], m Map.! id, types)
+  return ([], m `lookupik` id, types)
 demilkExpr types (ELitInt _ n) = do
   tmp <- freshTmp
   return ([CPY tmp (V $ VInt n)], tmp, Map.insert tmp EI32 types)
@@ -290,7 +294,7 @@ demilkExpr types (EAdd _ ex ao ex') = do
   let op = case ao of
         Plus _ -> ADD
         Minus _ -> SUB
-  return (bl ++ bl' ++ [op tmp (L l) (L l')], tmp, Map.insert tmp (ts2 Map.!   l) ts2)
+  return (bl ++ bl' ++ [op tmp (L l) (L l')], tmp, Map.insert tmp (ts2 `lookupik`   l) ts2)
 demilkExpr types (ERel _ ex ro ex') = do
   (bl, l, ts1) <- demilkExpr types ex
   (bl', l', ts2) <- demilkExpr ts1 ex'
@@ -340,6 +344,6 @@ demilkType (Void _) = EVoid
 demilkType _ = undefined
 
 getVal :: Map.Map Label Value -> ET -> IO Value
-getVal env (L s) = return $ env Map.!   s
+getVal env (L s) = return $ env `lookupik`   s
 getVal env (V v) = return v
 

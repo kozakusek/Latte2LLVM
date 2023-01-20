@@ -16,7 +16,7 @@ import Data.Either (fromRight)
 import Backend.ArabicaGenerator (generateLLVM)
 import System.Process (system)
 import qualified Data.Map as Map
-import Backend.SingleShotAffogato (makeCFG, computeDominators, computeImmediateDominators, computeDominanceFrontier, placePhiNodes)
+import Backend.SingleShotAffogato
 
 compileFile :: Bool -> FilePath -> IO ()
 compileFile v f = readFile f >>= compile v f
@@ -31,7 +31,7 @@ compile verbose fn code = do
   let desugared = parsed >>= desugar
   case desugared of
     Left err -> mainErr err
-    Right c -> when verbose $ 
+    Right c -> when verbose $
       saveFile (replaceExtension fn ".desugared") (render $ prt 0 c) >>
       putStrLn "TypeChecking..."
   let checked = desugared >>= typeCheck
@@ -41,25 +41,12 @@ compile verbose fn code = do
   hPutStrLn stderr "OK"
 #if COMPILER
   let esp = removeMilk (fromRight undefined checked)
-  mapM_ (\(name, m) -> do
-     putStrLn name
-     let cfg = makeCFG m
-     let dom = computeDominators cfg
-     let idom = computeImmediateDominators cfg dom
-     let df = computeDominanceFrontier cfg idom
-     let phi = placePhiNodes cfg df
-     putStrLn $ show $ cfg
-     putStrLn "DOMINATORS:"
-     putStrLn $ show $ dom 
-     putStrLn "IMMEDIATE DOMINATORS:"
-     putStrLn $ show $ idom
-     putStrLn "DOMINANCE FRONTIER:"
-     putStrLn $ show $ df
-     putStrLn "PHI NODES:"
-     putStrLn $ show $ phi
-     ) $ Map.assocs $ functions esp
+  --mapM_ uglyDebug $ Map.assocs $ functions esp
   when verbose $ saveFile (replaceExtension fn ".esp") (show esp)
-  let code = generateLLVM esp
+  when verbose $ putStrLn "Optimizing..."
+  let espOpt = makeAffogato esp
+  when verbose $ saveFile (replaceExtension fn ".esp.ssa") (show espOpt)
+  let code = generateLLVM espOpt
   saveFile (replaceExtension fn ".ll") code
   system $ "llvm-link " ++ (if verbose then "-v " else "") ++ "-o " ++ (replaceExtension fn ".bc") ++ " " ++ (replaceExtension fn ".ll") ++ " " ++ "lib/runtime.bc"
   return ()
@@ -78,3 +65,37 @@ main = do
   case filter (/= "-v") args of
     [] -> hPutStrLn stderr "Error: no input files" >> exitFailure
     files -> mapM_ (compileFile verbose) files
+
+
+uglyDebug :: (String, Method) -> IO ()
+uglyDebug (name, m) = do
+     putStrLn name
+     let cfg = makeCFG m
+     let dom = computeDominators cfg
+     let idom = computeImmediateDominators cfg dom
+     let df = computeDominanceFrontier cfg idom
+     let phi = placePhiNodes cfg df
+     let m'body1 = linearizeCFG $ renameVariables phi
+     let m'body2 = linearizeCFG $ caffeinePropagation $ renameVariables phi
+     let m'body3 = linearizeCFG $ collectDirtyCups $ caffeinePropagation $ renameVariables phi
+     let m'body4 = linearizeCFG $ cleanUpAfterDead $ removeDeadBlocks $ collectDirtyCups $ caffeinePropagation $ renameVariables phi
+     let only = linearizeCFG $ coffeTamping $ renameVariables phi
+     print cfg
+     putStrLn "DOMINATORS:"
+     print dom
+     putStrLn "IMMEDIATE DOMINATORS:"
+     print idom
+     putStrLn "DOMINANCE FRONTIER:"
+     print df
+     putStrLn "PHI NODES:"
+     print phi
+     putStrLn "ESP:"
+     putStrLn $ unlines $ show <$> m'body1
+     putStrLn "ESP (after caffeine propagation):"
+     putStrLn $ unlines $ show <$> m'body2
+     putStrLn "ESP (after caffeine propagation and dirty cup collection):"
+     putStrLn $ unlines $ show <$> m'body3
+     putStrLn "ESP (after caffeine propagation, dirty cup collection and dead code removal):"
+     putStrLn $ unlines $ show <$> m'body4
+     putStrLn "ESP (after caffeine propagation, dirty cup collection, dead code removal and coffee tamping):"
+     putStrLn $ unlines $ show <$> only

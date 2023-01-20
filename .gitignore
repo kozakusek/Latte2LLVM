@@ -2,6 +2,7 @@
 *.ll
 *.bc
 *.esp
+*.esp.ssa
 *.desugared
 *.o
 *.hi
