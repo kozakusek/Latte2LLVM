@@ -33,10 +33,10 @@ Latte/Abs.hs Latte/Lex.x Latte/Par.y Latte/Print.hs : Latte.cf
 %.hs : %.x
 	${ALEX} ${ALEX_OPTS} $<
 
-latc : Latte/Abs.hs Latte/Lex.hs Latte/Par.hs Latte/Print.hs Backend/Milkremover.hs Frontend/Desugaring.hs Frontend/Typechecker.hs Main.hs
+latc : Latte/Abs.hs Latte/Lex.hs Latte/Par.hs Latte/Print.hs Backend/Milkremover.hs Frontend/*.hs Main.hs
 	${GHC}  Main.hs -o latc
 
-latc_llvm : Latte/Abs.hs Latte/Lex.hs Latte/Par.hs Latte/Print.hs Backend/*.hs Frontend/Desugaring.hs Frontend/Typechecker.hs Main.hs
+latc_llvm : Latte/Abs.hs Latte/Lex.hs Latte/Par.hs Latte/Print.hs Backend/*.hs Frontend/*.hs  Main.hs
 	${GHC} Main.hs -DCOMPILER -o latc_llvm
 
 # Rules for cleaning generated files.

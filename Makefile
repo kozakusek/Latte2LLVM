@@ -13,8 +13,11 @@ exec: src/*.hs src/Backend/*.hs src/Frontend/*.hs src/Latte.cf
 
 clean:
 	$(MAKE) -C src clean
-	rm lib/runtime.ll
-	rm lib/runtime.bc
+	rm -f lib/runtime.ll
+	rm -f lib/runtime.bc
+	cd tests/good/ && rm -f *.bc *.ll *.esp *.ssa *.desugared
+	cd tests/extensions/ && rm -f */*.bc */*.ll */*.esp */*.ssa */*.desugared
+	cd tests/tmytests/good && rm -f *.bc *.ll *.esp *.ssa *.desugared
 
 distclean: clean
 	$(MAKE) -C src distclean

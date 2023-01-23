@@ -1,5 +1,13 @@
 # Typechecker $ LLVM compiler
 
+## Prerequisites
+
+ * Haskell Stack
+ * LLVM
+ * BNFC
+ * Happy
+ * Alex
+
 ## Make:
 ```
 make
@@ -19,8 +27,9 @@ Compiler
 ```
 
 ## What has been done
-
- * Usin PHI nodes instead of `alloca` and `store`
+ 
+ * Basic Latte typechecker and LLVM compiler 
+ * Using PHI nodes instead of `alloca` and `store`
  * Copy Propagation and Constant Folding
  * Dead Code Elimination
  * Global Common Subexpression Elimination
@@ -46,3 +55,11 @@ It informs the user with an error message.
         * ASTInterpreter.hs - An early version of Espresso IR interpreter, used for debugging.
  * tests/ - Tests for the typechecker and the compiler (tests/extensions/arrays1 are irrelevant)
  * lib/ - Latte standard library with addition of `concatStrings`, `compareStrings` and `__calloc__`
+
+## Verbose output
+
+ * .desugared - Latte program after desugaring
+ * .esp - Espresso IR
+ * .esp.ssa - Espresso IR in SSA form after optimizations
+ * .ll - LLVM IR
+ * .bc - LLVM Bitcode

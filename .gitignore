@@ -6,5 +6,6 @@
 *.desugared
 *.o
 *.hi
+*.tar.gz
 latc
 latc_llvm
