@@ -7,7 +7,7 @@ module Backend.SingleShotAffogato where
 
 import Backend.Milkremover
 import Data.Bifunctor (first, second)
-import Data.List (intersect, mapAccumL, sort, sortBy, union)
+import Data.List (intersect, mapAccumL, sort, sortBy, union, find)
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes, fromJust, fromMaybe, isJust, mapMaybe)
 import qualified Data.Set as Set
@@ -28,12 +28,13 @@ instance Show CoffeFlowGraph where
   show (CFG b p s) = "Blocks: " ++ show b ++ "\nPredecessors: " ++ show p ++ "\nSuccessors: " ++ show s ++ "\n"
 
 makeAffogato :: Espresso -> Espresso
-makeAffogato esp = esp {functions = Map.map (makeAffogatoMethod rets) (functions esp)}
+makeAffogato esp = esp {functions = Map.mapWithKey (makeAffogatoMethod cls rets) (functions esp)}
   where
     rets = Map.map retType (functions esp) `Map.union` builtinMthET
+    cls = classes esp
 
-makeAffogatoMethod :: Map.Map Label EspressoType -> Method -> Method
-makeAffogatoMethod rets m = m {body = body', types = types'}
+makeAffogatoMethod :: ClMap -> Map.Map Label EspressoType -> Label -> Method -> Method
+makeAffogatoMethod cls rets name m = m {body = body', types = types'}
   where
     cfg = makeCFG m
     df = computeDominanceFrontier cfg $ computeImmediateDominators cfg (computeDominators cfg)
@@ -48,8 +49,8 @@ makeAffogatoMethod rets m = m {body = body', types = types'}
       Just et -> Map.insert s et m'
     gatherTypes m' (ADD s (V va) _) = case va of
       VInt _ -> Map.insert s EI32 m'
-      VBool _ -> Map.insert s EI1 m'
       VString _ -> Map.insert s EStr m'
+      _ -> error $ "Addition of " ++ show va ++ " not supported"
     gatherTypes m' (SUB s _ _) = Map.insert s EI32 m'
     gatherTypes m' (MUL s _ _) = Map.insert s EI32 m'
     gatherTypes m' (DIV s _ _) = Map.insert s EI32 m'
@@ -72,12 +73,43 @@ makeAffogatoMethod rets m = m {body = body', types = types'}
                   V (VBool _) -> Just EI1
                   V (VInt _) -> Just EI32
                   V (VString _) -> Just EStr
+                  V (VClass x) -> Just (EClass x)
+                  V (VNull x) -> Just (EClass x)
               )
               x0
        in case catMaybes ts of
             [] -> m'
             h : _ -> Map.insert s h m'
-    gatherTypes m' (CALL s f _) = Map.insert s (rets `lookupik2` f) m'
+    gatherTypes m' (CALL s f _) = case rets Map.!? f of 
+      Nothing -> let (cl, _) = break (== '.') name in case methodOwner cls f cl of
+        Nothing -> error $ "Function " ++ f ++ " not found"
+        Just x -> Map.insert s (rets `lookupik2` (x ++ "." ++ f)) m'
+      Just t -> Map.insert s t m'
+    gatherTypes m' (GET s et f) = case et of
+      L str -> case m' Map.!? str of
+        Just (EClass x) -> Map.insert s (fields (cls `lookupik2` x) `lookupik2` f) m'
+        _ -> m'
+      V (VClass x) -> Map.insert s (fields (cls `lookupik2` x) `lookupik2` f) m'
+      V (VNull x) -> error "Null pointer exception"
+      _ -> m'
+    gatherTypes m' (SET et f et') = case et' of
+      L s -> case m' Map.!? s of
+        Nothing -> case et of
+          L str -> case m' Map.!? str of
+            Just (EClass x) -> Map.insert s (fields (cls `lookupik2` x) `lookupik2` f) m'
+            _ -> m'
+          V (VClass x) -> Map.insert s (fields (cls `lookupik2` x) `lookupik2` f) m'
+          V (VNull x) -> error "Null pointer exception"
+          _ -> m'
+        Just t -> m'
+      _ -> m'
+    gatherTypes m' (NEW s x) = Map.insert s (EClass x) m'
+    gatherTypes m' (CAST s ty et) = Map.insert s (EClass ty) m'
+    gatherTypes m' (RET et) = case et of
+      L s -> case m' Map.!? s of
+        Just _ -> m'
+        Nothing -> Map.insert s (retType m) m'
+      _ -> m'
     gatherTypes m' _ = m'
 
 makeCFG :: Method -> CoffeFlowGraph
@@ -231,6 +263,8 @@ getVariables = foldr f Set.empty
       LRE str _ _ -> Set.insert str s
       CPY str _ -> Set.insert str s
       CALL str _ _ -> Set.insert str s
+      GET str _ _ -> Set.insert str s
+      NEW str _ -> Set.insert str s
       _ -> s
 
 renameVariables :: CoffeFlowGraph -> CoffeFlowGraph
@@ -289,9 +323,22 @@ renameInstr pl (c, h) instr = case instr of
   CALL s str ets ->
     let (s', h', c') = next h c s
         ets' = map (modEt c) ets
-     in ((c', h'), CALL s' str ets')
+    in ((c', h'), CALL s' str ets')
   CBR et s str -> let et' = modEt c et in ((c, h), CBR et' s str)
   RET et -> let et' = modEt c et in ((c, h), RET et')
+  GET s et str ->
+    let et' = modEt c et
+        (s', h', c') = next h c s
+    in ((c', h'), GET s' et' str)
+  SET et s et' ->
+    let et'' = modEt c et
+        et''' = modEt c et'
+    in ((c, h), SET et'' s et''')
+  NEW s str -> let (s', h', c') = next h c s in ((c', h'), NEW s' str)
+  CAST s ty et -> 
+    let et' = modEt c et
+        (s', h', c') = next h c s
+    in ((c', h'), CAST s' ty et')
   _ -> ((c, h), instr)
   where
     next h c s = case Map.lookup s h of
@@ -417,6 +464,32 @@ caffeinateInstr (fix, vals) instr = case instr of
       Nothing -> ((fix, vals), Just instr)
       Just et' -> ((False, vals), Just $ RET et')
     V va -> ((fix, vals), Just instr)
+  SET et field et' -> let
+    (bet, fix') = case et of
+      V va -> (et, fix)
+      L s -> case vals Map.!? s of
+        Nothing -> (et, fix)
+        Just et'' -> (et'', False)
+    (bet', fix'') = case et' of
+      V va -> (et', fix')
+      L s -> case vals Map.!? s of
+        Nothing -> (et', fix')
+        Just et'' -> (et'', False)
+    in ((fix'', vals), Just $ SET bet field bet')
+  GET s et field -> let
+    (bet, fix') = case et of
+      L s -> case vals Map.!? s of
+        Nothing -> (et, fix)
+        Just et' -> (et', False)
+      V va ->  (et, fix) -- Shouldn't happen
+    in ((fix', vals), Just $ GET s bet field)
+  CAST s ty et -> let
+    (bet, fix') = case et of
+      L s -> case vals Map.!? s of
+        Nothing -> (et, fix)
+        Just et' -> (et', False)
+      V va ->  (et, fix) -- Shouldn't happen
+    in ((fix', vals), Just $ CAST s ty bet)
   _ -> ((fix, vals), Just instr)
   where
     aux2 f f' s et et' = case (et, et') of
@@ -459,6 +532,9 @@ collectDirtyCups (CFG b p s) = CFG b' p s
             NOT str _ -> str `Set.member` used
             CPY str _ -> str `Set.member` used
             PHI str _ -> str `Set.member` used
+            GET str _ _ -> str `Set.member` used
+            NEW str _ -> str `Set.member` used
+            CAST str _ _ -> str `Set.member` used
             _ -> True
         )
     addVars =
@@ -484,6 +560,9 @@ collectDirtyCups (CFG b p s) = CFG b' p s
             CALL _ _ ets -> foldr addVar s ets
             CBR et _ _ -> addVar et s
             RET et -> addVar et s
+            GET _ et _ -> addVar et s
+            SET et _ et' -> addVar et $ addVar et' s
+            CAST _ _ et -> addVar et s
             _ -> s
         )
     addVar et s = case et of L str -> Set.insert str s; V _ -> s
@@ -578,9 +657,12 @@ gcseInstr (etv, vtv) instr = case instr of
      in case etv Map.!? PHI s x0' of
           Nothing -> ((Map.insert (PHI s x0') s etv, vtv), Just $ PHI s x0')
           Just str -> ((etv, Map.insert s str vtv), Nothing)
-  CALL s str ets -> let bets = lookupET <$> ets in ((etv, vtv), Just $ CALL s str bets)
+  CALL s str ets -> ((etv, vtv), Just $ CALL s str (lookupET <$> ets))
   CBR et s str -> let bet = lookupET et in ((etv, vtv), Just $ CBR bet s str)
   RET et -> let bet = lookupET et in ((etv, vtv), Just $ RET bet)
+  GET s et f -> ((etv, vtv), Just $ GET s (lookupET et) f)
+  SET et str et' -> ((etv, vtv), Just $ SET (lookupET et) str (lookupET et'))
+  CAST s ty et -> ((etv, vtv), Just $ CAST s ty (lookupET et))
   _ -> ((etv, vtv), Just instr)
   where
     gcse2 f s et et' =
@@ -696,9 +778,9 @@ getLabelET _ = error "Expected label"
 
 builtinMthET :: Map.Map String EspressoType
 builtinMthET = Map.map aux $ Map.mapKeys (\(Ident x) -> x) Typechecker.builtinMethods
-  where 
+  where
     aux = mapType . Typechecker.methodRetType
-    mapType (Void _) = EVoid 
+    mapType (Void _) = EVoid
     mapType (Int _) = EI32
     mapType (Bool _) = EI1
     mapType (Str _) = EStr

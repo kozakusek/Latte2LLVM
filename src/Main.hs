@@ -46,6 +46,7 @@ compile verbose fn code = do
   when verbose $ putStrLn "Optimizing..."
   let espOpt = makeAffogato esp
   when verbose $ saveFile (replaceExtension fn ".esp.ssa") (show espOpt)
+  when verbose $ putStrLn "Generating LLVM..."
   let code = generateLLVM espOpt
   saveFile (replaceExtension fn ".ll") code
   system $ "llvm-link " ++ (if verbose then "-v " else "") ++ "-o " ++ (replaceExtension fn ".bc") ++ " " ++ (replaceExtension fn ".ll") ++ " " ++ "lib/runtime.bc"

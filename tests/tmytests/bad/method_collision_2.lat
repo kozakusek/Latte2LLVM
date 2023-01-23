@@ -1,0 +1,20 @@
+class Collision {
+    int a;
+    int b;
+    
+    int dummy() {
+        return 42;
+    }
+
+    void doBadStuff(int x) {
+        printInt(x);
+    }
+
+    void doBadStuff(int x) {
+        printInt(x);
+    }
+}
+
+int main() {
+    return 0;
+}

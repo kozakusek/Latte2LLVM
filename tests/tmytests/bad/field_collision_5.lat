@@ -1,0 +1,17 @@
+class Ok {
+    int a;
+    int b;
+}
+
+class GoodKiddo extends Ok {
+    int c;
+}
+
+class BadKiddo extends Ok {
+    int a;
+    int c;
+}
+
+int main() {
+    return 0;
+}

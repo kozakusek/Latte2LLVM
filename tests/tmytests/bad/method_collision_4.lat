@@ -1,0 +1,40 @@
+class Ok {
+    int a;
+    int b;
+    
+    int dummy() {
+        return 42;
+    }
+
+    void doBadStuff(int x) {
+        printInt(x);
+    }
+}
+
+class StillOk extends Ok {
+    int d;
+
+    int setTheD(int x) {
+        d = x;
+        return -d;
+    }
+}
+
+
+class BadKiddo extends StillOk {
+    int c;
+    int e;
+    
+    int dummy() {
+        return 42;
+    }
+
+    void doBadStuff(int x, int y) {
+        printInt(x);
+        printInt(y);
+    }
+}
+
+int main() {
+    return 0;
+}

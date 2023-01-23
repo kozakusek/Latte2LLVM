@@ -1,0 +1,14 @@
+int main() {
+    int a = 2, b = 3;
+    int c = a + b; // 5
+    int c2 = a + b;
+    int d = a - b; // -1
+    int d2 = a - b;
+    int e = a * b; // 6
+    int e2 = a * b;
+    int f = b / a; // 1
+    int f2 = b / a;
+
+    printInt(c + c2 + d + d2 + e + e2 + f + f2);
+    return 0;
+}

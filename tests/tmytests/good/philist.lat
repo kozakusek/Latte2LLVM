@@ -1,0 +1,43 @@
+class list {
+  int elem;
+  list next;
+}
+
+int head (list xs) {
+  return xs . elem;
+}
+ 
+list cons (int x, list xs) {
+  list n;
+  n = new list;
+  n.elem = x;
+  n.next = xs;
+  return n;
+}
+
+int length (list xs) {
+  if (xs==(list)null)
+    return 0;
+  else
+    return 1 + length (xs.next);
+}
+
+int main() {
+  list xs;
+  xs = cons (1, cons (2, cons (3, (list)null)));
+  int h = head (xs);
+  int n = readInt();
+  if (n == 0) {
+    h = 4;
+    xs = cons (5, xs);
+    printInt (head (xs));
+  } else {
+    h = 2;
+    xs = cons (6, xs);
+    xs.next.elem = 4;
+    printInt (length (xs));
+  }
+  printInt (h);
+  printInt (length (xs));
+  return 0;
+}

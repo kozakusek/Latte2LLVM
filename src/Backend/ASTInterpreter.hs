@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 module Backend.ASTInterpreter where
 
 import Backend.Milkremover
@@ -8,7 +9,7 @@ import Data.List (elemIndex)
 
 
 interpret :: Espresso -> IO ()
-interpret (Espresso functions) = void (executeFun functions (functions Map.!   "main") Map.empty)
+interpret (Espresso functions _) = void (executeFun functions (functions Map.!   "main") Map.empty)
 
 executeFun :: Map.Map Label Method -> Method -> Map.Map Label Value -> IO Value
 executeFun funs (Method _ body _ _) env = do

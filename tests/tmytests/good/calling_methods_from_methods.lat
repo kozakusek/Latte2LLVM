@@ -1,0 +1,39 @@
+class Caller {
+    string name;
+    int age;
+
+    void init(string name, int age) {
+        self.name = name;
+        self.age = age;
+    }
+
+    void init2(string n, int a) {
+        name = n;
+        age = a;
+    }
+
+    string say(string text) {
+        return name + " says: " + text;
+    }
+
+    void call(string text) {
+        printString(say(text) + ".I am ");
+        printInt(age);
+        printString("years old.");
+    }
+
+    void call2(string text) {
+        printString(self.say(text));     
+    }
+}
+
+int main() {
+    Caller c = new Caller;
+    c.init("John", 21);
+    c.call("Hello");
+    c.call2("Hello");
+    c.init2("Paul", 37);
+    c.call("Hello");
+    c.call2("Hello");
+    return 0;
+}

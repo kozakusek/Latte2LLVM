@@ -60,3 +60,7 @@ char* concatStrings(char* s1,  char* s2) {
 int compareStrings(char* s1,  char* s2) {
     return strcmp(s1, s2) == 0;
 }
+
+char* __calloc__(int size) {
+    return (char*) calloc(size, 1);
+}

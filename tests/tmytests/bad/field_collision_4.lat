@@ -1,0 +1,12 @@
+class Ok {
+    int a;
+    int b;
+}
+
+class BadKiddo extends Ok {
+    string b;
+}
+
+int main() {
+    return 0;
+}

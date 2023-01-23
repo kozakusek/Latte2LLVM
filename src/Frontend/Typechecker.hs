@@ -137,21 +137,22 @@ resolveCandiates env = do
     auxM classes = Map.map (\m -> m {methodThis = Right $ classes Map.! fromLeft undefined (methodThis m)})
 
 checkVirtuals :: Env -> Err ()
-checkVirtuals env = forM_ (map snd $ Map.assocs $ envClasses env) (checkVirtualsCl Map.empty)
+checkVirtuals env = forM_ (map snd $ Map.assocs $ envClasses env) (checkVirtualsCl Map.empty Set.empty)
 
-checkVirtualsCl :: Map.Map Ident Method -> Class -> Err ()
-checkVirtualsCl methods cl = case classBase cl of
-  Nothing -> return ()
-  Just cl' -> do
-    let pM = classMethods cl
-    forM_ (Map.assocs pM) $ \(name, m) -> do
-      when (Map.member name methods) $ do
-        let m' = methods Map.! name
-        unless (isSameType (methodRetType m) (methodRetType m')) $ fail $ "Error: Method " ++ ident name ++ " has different return type in class " ++ ident (className cl)
-        when (length (methodArgs m) /= length (methodArgs m')) $ fail $ "Error: Method " ++ ident name ++ " has different number of arguments in class " ++ ident (className cl)
-        forM_ (zip (methodArgs m) (methodArgs m')) $ \(a, a') -> do
-          when (argType a /= argType a') $ fail $ "Error: Method " ++ ident name ++ " has different argument types in class " ++ ident (className cl)
-    checkVirtualsCl (Map.union pM methods) cl'
+checkVirtualsCl :: Map.Map Ident Method -> Set.Set Ident -> Class -> Err ()
+checkVirtualsCl methods fields cl = do
+  let pM = classMethods cl
+  forM_ (Map.assocs pM) $ \(name, m) -> do
+    when (Map.member name methods) $ do
+      let m' = methods Map.! name
+      unless (isSameType (methodRetType m) (methodRetType m')) $ fail $ "Error: Method " ++ ident name ++ " has different return type in class " ++ ident (className cl)
+      when (length (methodArgs m) /= length (methodArgs m')) $ fail $ "Error: Method " ++ ident name ++ " has different number of arguments in class " ++ ident (className cl)
+      forM_ (zip (methodArgs m) (methodArgs m')) $ \(a, a') -> do
+        when (argType a /= argType a') $ fail $ "Error: Method " ++ ident name ++ " has different argument types in class " ++ ident (className cl)
+  let pF = Set.fromList $ Map.keys $ classFields cl
+  forM_  pF $ \name -> do
+    when (Set.member name fields) $ fail $ "Error: Field " ++ ident name ++ " is already defined in class " ++ ident (className cl)
+  forM_ (classBase cl) (checkVirtualsCl (Map.union pM methods) (Set.union pF fields))
 
 functions :: Program -> Env -> Err Env
 functions (ProgramT _ defs) env = foldM addFunction (env {envFunctions = builtinMethods}) defs
