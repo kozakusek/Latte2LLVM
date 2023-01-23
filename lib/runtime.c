@@ -62,5 +62,5 @@ int compareStrings(char* s1,  char* s2) {
 }
 
 char* __calloc__(int size) {
-    return (char*) calloc(size, 1);
+    return (char*) calloc(1, size);
 }

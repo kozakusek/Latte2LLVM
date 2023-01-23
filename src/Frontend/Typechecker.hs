@@ -212,6 +212,8 @@ verifyStmt m (BStmt pos (BlockT _ stmts)) = do
 verifyStmt m (Decl pos ty its) = do
   when (isArrArr ty) $ fail $ "Error" ++ showPos pos ++ ": Variable declaration has array of arrays as type"
   when (isVoid ty) $ fail $ "Error" ++ showPos pos ++ ": Variable declaration has void as type"
+  env <- get
+  unless (isDefined env ty) $ fail $ "Error" ++ showPos pos ++ ": Type " ++ showType ty ++ " is not defined"
   forM_
     its
     ( \item -> do
@@ -664,6 +666,10 @@ isArrArr _ = False
 isClass :: Type -> Bool
 isClass (Cl _ _) = True
 isClass _ = False
+
+isDefined :: Env -> Type -> Bool
+isDefined env (Cl _ id) = Map.member id (envClasses env)
+isDefined _ _ = True
 
 forbiddenTypes :: Set Ident
 forbiddenTypes = Set.fromList [Ident "int", Ident "boolean", Ident "string", Ident "void"]
