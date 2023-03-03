@@ -1,4 +1,4 @@
-# Typechecker $ LLVM compiler
+# Typechecker & LLVM compiler
 
 ## Prerequisites
 
